@@ -1,2 +1,2 @@
-# TangySync-Client
-TangySync Client
+# TangySync-Repo
+TangySync Repo
