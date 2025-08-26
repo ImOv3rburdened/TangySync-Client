@@ -1,0 +1,130 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- ===== Build config (portable) ===== -->
+  <PropertyGroup>
+    <TargetFramework>net9.0-windows</TargetFramework>
+
+    <!-- Let solution show AnyCPU/x64, but ALWAYS emit x64 binaries -->
+    <Platforms>AnyCPU;x64</Platforms>
+    <PlatformTarget Condition="'$(Platform)'==''">x64</PlatformTarget>
+    <PlatformTarget Condition="'$(Platform)'=='AnyCPU'">x64</PlatformTarget>
+    <PlatformTarget Condition="'$(Platform)'=='x64'">x64</PlatformTarget>
+
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+
+    <!-- Assembly name must match manifest InternalName -->
+    <AssemblyName>TangySyncClient</AssemblyName>
+    <RootNamespace>TangySyncClient</RootNamespace>
+
+    <!-- Copy NuGet runtime deps to bin\ so Dalamud can load them -->
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+
+    <!-- Version (keep in sync with manifest AssemblyVersion) -->
+    <PluginVersion>0.1.0</PluginVersion>
+    <Version>$(PluginVersion)</Version>
+
+    <!-- Your GitHub repo (used to build release URLs in JSON) -->
+    <GitHubOwner>ImOv3rburdened</GitHubOwner>
+    <GitHubRepo>TangySync-Client</GitHubRepo>
+
+    <!-- Release asset name you will upload -->
+    <ReleaseZipName>release.zip</ReleaseZipName>
+
+    <!-- Dev plugin folder (portable via %APPDATA%) -->
+    <DevPluginDir>$(APPDATA)\XIVLauncher\devPlugins\TangySyncClient</DevPluginDir>
+
+    <!-- Dist outputs (relative to repo) -->
+    <DistRoot>$(ProjectDir)dist</DistRoot>
+    <DistDir>$(DistRoot)\$(PluginVersion)</DistDir>
+
+    <!-- Temp pack folder to stage files before zipping -->
+    <PackDir>$(DistDir)\_pack</PackDir>
+  </PropertyGroup>
+
+  <!-- Optional: warn if solution selects AnyCPU -->
+  <Target Name="WarnAnyCpu" BeforeTargets="Build" Condition="'$(Platform)'=='AnyCPU'">
+    <Message Text="NOTE: Platform 'AnyCPU' selected; project will still emit x64 binaries." Importance="high" />
+  </Target>
+
+  <!-- ===== Direct reference to local Dalamud.dll (relative) ===== -->
+  <ItemGroup>
+    <!-- Keep a copy of Dalamud.dll at TangySyncClient/lib/Dalamud.dll -->
+    <Reference Include="Dalamud">
+      <HintPath>$(ProjectDir)lib\Dalamud.dll</HintPath>
+      <Private>false</Private>               <!-- do NOT copy to bin\ -->
+      <SpecificVersion>false</SpecificVersion>
+    </Reference>
+  </ItemGroup>
+
+  <!-- ===== NuGets you actually ship ===== -->
+  <ItemGroup>
+    <PackageReference Include="ImGui.NET" Version="1.*" />
+    <PackageReference Include="K4os.Compression.LZ4.Legacy" Version="*" />
+  </ItemGroup>
+
+  <!-- ===== Dev copy (auto-populate devPlugins) ===== -->
+  <ItemGroup>
+    <DevCopy Include="$(TargetDir)*.dll" Exclude="$(TargetDir)Dalamud.*.dll" />
+    <DevCopy Include="$(ProjectDir)manifest.json" />
+  </ItemGroup>
+
+  <Target Name="DevCopy_TangySync" AfterTargets="Build">
+    <Message Text="Copying dev files to $(DevPluginDir)" Importance="high" />
+    <MakeDir Directories="$(DevPluginDir)" />
+    <Copy SourceFiles="@(DevCopy)" DestinationFolder="$(DevPluginDir)" SkipUnchangedFiles="true" />
+  </Target>
+
+  <!-- ===== Packaging without CodeTaskFactory: stage + PowerShell zip ===== -->
+  <ItemGroup>
+    <PluginZipInclude Include="$(TargetDir)*.dll" Exclude="$(TargetDir)Dalamud.*.dll" />
+    <PluginZipInclude Include="$(ProjectDir)manifest.json" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <!-- JSON points to the latest release asset named release.zip -->
+    <ReleaseBaseUrl>https://github.com/$(GitHubOwner)/$(GitHubRepo)/releases/latest/download</ReleaseBaseUrl>
+    <ReleaseZipUrl>$(ReleaseBaseUrl)/$(ReleaseZipName)</ReleaseZipUrl>
+  </PropertyGroup>
+
+  <Target Name="Package_TangySync" AfterTargets="Build">
+    <Message Text="Packaging to $(DistDir)" Importance="high" />
+    <MakeDir Directories="$(DistDir)" />
+    <RemoveDir Directories="$(PackDir)" Condition="Exists('$(PackDir)')" />
+    <MakeDir Directories="$(PackDir)" />
+
+    <!-- 1) Stage files into _pack -->
+    <Copy SourceFiles="@(PluginZipInclude)" DestinationFolder="$(PackDir)" SkipUnchangedFiles="true" />
+
+    <!-- 2) Create release.zip with PowerShell (Compress-Archive handles paths safely) -->
+    <Exec Command="powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command &quot;Compress-Archive -Path &apos;$(PackDir)\*&apos; -DestinationPath &apos;$(DistDir)\$(ReleaseZipName)&apos; -Force&quot;" />
+
+    <!-- 3) Clean staging folder -->
+    <RemoveDir Directories="$(PackDir)" />
+
+    <!-- 4) Write single-plugin repo JSON -->
+    <ItemGroup>
+      <RepoLines Include="{" />
+      <RepoLines Include="  &quot;Author&quot;: &quot;Tangy&quot;," />
+      <RepoLines Include="  &quot;Name&quot;: &quot;TangySync&quot;," />
+      <RepoLines Include="  &quot;InternalName&quot;: &quot;TangySyncClient&quot;," />
+      <RepoLines Include="  &quot;AssemblyVersion&quot;: &quot;$(PluginVersion)&quot;," />
+      <RepoLines Include="  &quot;DalamudApiLevel&quot;: 13," />
+      <RepoLines Include="  &quot;Description&quot;: &quot;See-everyone sync + GPose MCDF loader (Glamourer/Penumbra/etc).&quot;," />
+      <RepoLines Include="  &quot;Punchline&quot;: &quot;Sync + MCDF apply&quot;," />
+      <RepoLines Include="  &quot;Tags&quot;: [&quot;tangy&quot;,&quot;mcdf&quot;,&quot;glamourer&quot;,&quot;penumbra&quot;,&quot;syncshell&quot;]," />
+      <RepoLines Include="  &quot;RepoUrl&quot;: &quot;https://github.com/$(GitHubOwner)/$(GitHubRepo)&quot;," />
+      <RepoLines Include="  &quot;DownloadLinkInstall&quot;: &quot;$(ReleaseZipUrl)&quot;," />
+      <RepoLines Include="  &quot;DownloadLinkUpdate&quot;:  &quot;$(ReleaseZipUrl)&quot;" />
+      <RepoLines Include="}" />
+    </ItemGroup>
+
+    <!-- Dist copy -->
+    <WriteLinesToFile File="$(DistDir)\TangySync.json"
+                  Lines="@(RepoLines)" Overwrite="true" />
+
+    <WriteLinesToFile File="$(ProjectDir)\TangySync.json"
+                  Lines="@(RepoLines)" Overwrite="true" />
+  </Target>
+
+</Project>
