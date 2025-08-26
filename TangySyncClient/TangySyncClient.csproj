@@ -15,6 +15,7 @@
     <AssemblyName>TangySyncClient</AssemblyName>
     <RootNamespace>TangySyncClient</RootNamespace>
 
+    <!-- ensures NuGet runtime deps (ImGui.NET, K4os.*) land in bin\ -->
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
 
     <!-- Keep this in sync with manifest.json -->
@@ -31,11 +32,11 @@
     <!-- Dev plugins folder for quick testing -->
     <DevPluginDir>$(APPDATA)\XIVLauncher\devPlugins\TangySyncClient</DevPluginDir>
 
-    <!-- === CHANGED: put packaged ZIP inside repo under TangySyncClient/release === -->
+    <!-- Put packaged ZIP inside repo under TangySyncClient/release -->
     <DistDir>$(ProjectDir)release</DistDir>
     <PackDir>$(DistDir)\_pack</PackDir>
 
-    <!-- === CHANGED: JSON will point to the raw github URL for that file === -->
+    <!-- Repo JSON will point to the raw GitHub URL for that file -->
     <ReleaseZipUrl>https://raw.githubusercontent.com/$(GitHubOwner)/$(GitHubRepo)/main/TangySyncClient/release/$(ReleaseZipName)</ReleaseZipUrl>
   </PropertyGroup>
 
@@ -69,22 +70,37 @@
     <Copy SourceFiles="@(DevCopy)" DestinationFolder="$(DevPluginDir)" SkipUnchangedFiles="true" />
   </Target>
 
-  <!-- Package: stage to _pack then zip using PowerShell -->
-  <ItemGroup>
-    <PluginZipInclude Include="$(TargetDir)*.dll" Exclude="$(TargetDir)Dalamud.*.dll" />
-    <PluginZipInclude Include="$(ProjectDir)manifest.json" />
-  </ItemGroup>
-
+  <!-- Package: stage to _pack then zip using PowerShell
+       IMPORTANT: Recompute the include list INSIDE the target (after build). -->
   <Target Name="Package_TangySync" AfterTargets="Build">
     <Message Text="Packaging to $(DistDir)\$(ReleaseZipName)" Importance="high" />
+
+    <!-- Recompute file list at target execution time -->
+    <ItemGroup>
+      <PluginZipInclude Remove="@(PluginZipInclude)" />
+      <!-- all runtime DLLs next to the built assembly, except Dalamud.* -->
+      <PluginZipInclude Include="$(TargetDir)*.dll" Exclude="$(TargetDir)Dalamud.*.dll" />
+      <!-- always include your project-root manifest.json -->
+      <PluginZipInclude Include="$(ProjectDir)manifest.json" />
+    </ItemGroup>
+
+    <!-- Stage -->
     <MakeDir Directories="$(DistDir)" />
     <RemoveDir Directories="$(PackDir)" Condition="Exists('$(PackDir)')" />
     <MakeDir Directories="$(PackDir)" />
     <Copy SourceFiles="@(PluginZipInclude)" DestinationFolder="$(PackDir)" SkipUnchangedFiles="true" />
+
+    <!-- Log staged files for debugging -->
+    <Message Text="Staged files:" Importance="high" />
+    <Message Text="  @(PluginZipInclude->'%(FullPath)')" Importance="high" />
+
+    <!-- Zip -->
     <Exec Command="powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command &quot;Compress-Archive -Path &apos;$(PackDir)\*&apos; -DestinationPath &apos;$(DistDir)\$(ReleaseZipName)&apos; -Force&quot;" />
+
+    <!-- Clean staging -->
     <RemoveDir Directories="$(PackDir)" />
 
-    <!-- Proper Dalamud repo JSON: ARRAY with one plugin -->
+    <!-- Proper Dalamud repo JSON (ARRAY with one plugin) -->
     <ItemGroup>
       <RepoLines Include="[" />
       <RepoLines Include="  {" />
@@ -105,11 +121,11 @@
       <RepoLines Include="]" />
     </ItemGroup>
 
-    <!-- Write JSON next to csproj for the raw URL you share -->
+    <!-- Write JSON next to the csproj (this is the raw URL you share) -->
     <WriteLinesToFile File="$(ProjectDir)\TangySync.json" Lines="@(RepoLines)" Overwrite="true" />
   </Target>
 
-  <!-- Optional belt-and-suspenders to keep manifest in bin\ -->
+  <!-- Keep manifest near bin\ too (nice for dev) -->
   <ItemGroup>
     <None Update="manifest.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
