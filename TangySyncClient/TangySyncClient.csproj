@@ -29,7 +29,7 @@
     <GitHubRepo>TangySync-Client</GitHubRepo>
 
     <!-- Release asset name you will upload -->
-    <ReleaseZipName>release.zip</ReleaseZipName>
+    <ReleaseZipName>$(PluginVersion).zip</ReleaseZipName>
 
     <!-- Dev plugin folder (portable via %APPDATA%) -->
     <DevPluginDir>$(APPDATA)\XIVLauncher\devPlugins\TangySyncClient</DevPluginDir>
@@ -104,19 +104,23 @@
 
     <!-- 4) Write single-plugin repo JSON -->
     <ItemGroup>
-      <RepoLines Include="{" />
-      <RepoLines Include="  &quot;Author&quot;: &quot;Tangy&quot;," />
-      <RepoLines Include="  &quot;Name&quot;: &quot;TangySync&quot;," />
-      <RepoLines Include="  &quot;InternalName&quot;: &quot;TangySyncClient&quot;," />
-      <RepoLines Include="  &quot;AssemblyVersion&quot;: &quot;$(PluginVersion)&quot;," />
-      <RepoLines Include="  &quot;DalamudApiLevel&quot;: 13," />
-      <RepoLines Include="  &quot;Description&quot;: &quot;See-everyone sync + GPose MCDF loader (Glamourer/Penumbra/etc).&quot;," />
-      <RepoLines Include="  &quot;Punchline&quot;: &quot;Sync + MCDF apply&quot;," />
-      <RepoLines Include="  &quot;Tags&quot;: [&quot;tangy&quot;,&quot;mcdf&quot;,&quot;glamourer&quot;,&quot;penumbra&quot;,&quot;syncshell&quot;]," />
-      <RepoLines Include="  &quot;RepoUrl&quot;: &quot;https://github.com/$(GitHubOwner)/$(GitHubRepo)&quot;," />
-      <RepoLines Include="  &quot;DownloadLinkInstall&quot;: &quot;$(ReleaseZipUrl)&quot;," />
-      <RepoLines Include="  &quot;DownloadLinkUpdate&quot;:  &quot;$(ReleaseZipUrl)&quot;" />
-      <RepoLines Include="}" />
+      <RepoLines Include="[" />
+      <RepoLines Include="  {" />
+      <RepoLines Include="    &quot;Author&quot;: &quot;Tangy&quot;," />
+      <RepoLines Include="    &quot;Name&quot;: &quot;TangySync&quot;," />
+      <RepoLines Include="    &quot;InternalName&quot;: &quot;TangySyncClient&quot;," />
+      <RepoLines Include="    &quot;AssemblyVersion&quot;: &quot;$(PluginVersion)&quot;," />
+      <RepoLines Include="    &quot;ApplicableVersion&quot;: &quot;any&quot;," />
+      <RepoLines Include="    &quot;DalamudApiLevel&quot;: 13," />
+      <RepoLines Include="    &quot;Description&quot;: &quot;See-everyone sync + GPose MCDF loader (Glamourer/Penumbra/etc).&quot;," />
+      <RepoLines Include="    &quot;RepoUrl&quot;: &quot;https://github.com/$(GitHubOwner)/$(GitHubRepo)&quot;," />
+      <RepoLines Include="    &quot;Punchline&quot;: &quot;Sync + MCDF apply&quot;," />
+      <RepoLines Include="    &quot;Tags&quot;: [&quot;tangy&quot;,&quot;mcdf&quot;,&quot;glamourer&quot;,&quot;penumbra&quot;,&quot;syncshell&quot;]," />
+      <RepoLines Include="    &quot;LoadPriority&quot;: 0," />
+      <RepoLines Include="    &quot;DownloadLinkInstall&quot;: &quot;$(ReleaseZipUrl)&quot;," />
+      <RepoLines Include="    &quot;DownloadLinkUpdate&quot;: &quot;$(ReleaseZipUrl)&quot;" />
+      <RepoLines Include="  }" />
+      <RepoLines Include="]" />
     </ItemGroup>
 
     <!-- Dist copy -->
