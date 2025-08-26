@@ -19,7 +19,7 @@
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
 
     <!-- Keep this in sync with manifest.json -->
-    <PluginVersion>0.1.0</PluginVersion>
+    <PluginVersion>0.1.1</PluginVersion>
     <Version>$(PluginVersion)</Version>
 
     <!-- Your GitHub -->

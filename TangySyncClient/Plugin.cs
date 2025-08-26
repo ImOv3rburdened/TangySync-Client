@@ -59,6 +59,18 @@ public sealed class Plugin : IDalamudPlugin
         _onUiOpenHandler = () => _win.IsOpen = true;
         _ui.OpenConfigUi += (Action)_onUiOpenHandler;
 
+        // >>> Keep UI visible in GPose / cutscenes / when "Hide UI" is toggled
+        try
+        {
+            _ui.DisableGposeUiHide = true;
+            _ui.DisableCutsceneUiHide = true;
+            _ui.DisableUserUiHide = true;
+        }
+        catch
+        {
+            return;
+        }
+
         // 5) Command
         _cmdInfo = new CommandInfo(OnCommand) { HelpMessage = "Open TangySync" };
         Cmd!.AddHandler("/tangysync", _cmdInfo);
