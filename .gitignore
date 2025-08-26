@@ -399,5 +399,13 @@ FodyWeavers.xsd
 
 # JetBrains Rider
 *.sln.iml
-# Allow the plugin index JSON to be committed
+# Build outputs we don't commit
+bin/
+obj/
+dist/
+.vs/
+
+# Allow the published plugin files
 !TangySyncClient/TangySync.json
+!TangySyncClient/release/
+!TangySyncClient/release/release.zip

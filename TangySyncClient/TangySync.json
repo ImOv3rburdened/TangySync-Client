@@ -11,7 +11,7 @@
 "Punchline": "Sync + MCDF apply",
 "Tags": ["tangy","mcdf","glamourer","penumbra","syncshell"],
 "LoadPriority": 0,
-"DownloadLinkInstall": "https://github.com/ImOv3rburdened/TangySync-Client/releases/latest/download/0.1.0.zip",
-"DownloadLinkUpdate": "https://github.com/ImOv3rburdened/TangySync-Client/releases/latest/download/0.1.0.zip"
+"DownloadLinkInstall": "https://raw.githubusercontent.com/ImOv3rburdened/TangySync-Client/main/TangySyncClient/release/release.zip",
+"DownloadLinkUpdate":  "https://raw.githubusercontent.com/ImOv3rburdened/TangySync-Client/main/TangySyncClient/release/release.zip"
 }
 ]
