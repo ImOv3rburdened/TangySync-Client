@@ -399,3 +399,5 @@ FodyWeavers.xsd
 
 # JetBrains Rider
 *.sln.iml
+# Allow the plugin index JSON to be committed
+!TangySyncClient/TangySync.json
