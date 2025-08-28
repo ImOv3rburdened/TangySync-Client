@@ -1,16 +1,17 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Numerics;
-using System.Text.Json;
-using System.Threading;
-using System.Threading.Tasks;
-using Dalamud.Interface.Colors;
+﻿using Dalamud.Interface.Colors;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
 using Dalamud.Utility;
 using ImGuiNET;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Net.Http;
+using System.Numerics;
+using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
 using TangySync.Interop;
 using TangySync.MCDF;
 using TangySync.Services;
@@ -53,6 +54,21 @@ public sealed class MainWindow : IDisposable
     private string _vanity = "";
     private string _friendToAdd = "";
     private List<FriendRow> _friends = new();
+
+    // Health state
+    private bool _healthLoading = false;
+    private string _healthError = "";
+    private string _healthService = "";
+    private string _healthVersion = "";
+    private string _healthTime = "";
+    private string _healthNotes = "";
+    private int _healthUsers = 0;
+    // key -> true/false; null = not loaded yet (shows yellow)
+    private readonly Dictionary<string, bool?> _healthFlags = new(StringComparer.OrdinalIgnoreCase);
+
+    // Convenience
+    private string HealthUrl => _cfg.Data.ServerBaseUrl.TrimEnd('/') + "/health.php";
+
 
     private record FriendRow(string Vanity, bool Online, string Note);
 
@@ -434,16 +450,137 @@ public sealed class MainWindow : IDisposable
     }
 
     // ----------------- Health -----------------
-    private async void DrawHealth()
+    private static void DrawDot(Vector4 color)
     {
-        if (ImGui.Button("Ping /api/health"))
-        {
-            var (json, st) = await _api.Health();
-            _status = st == 200 || st == 206
-                ? $"API OK — users: {json.RootElement.TryGetProperty("user_count", out var c).ToString()}"
-                : $"API HTTP {st}";
-        }
+        ImGui.PushStyleColor(ImGuiCol.Text, color);
+        ImGui.TextUnformatted("●");
+        ImGui.PopStyleColor();
     }
+
+    private static void StatusRow(string label, bool? ok)
+    {
+        ImGui.TableNextRow();
+        ImGui.TableSetColumnIndex(0); ImGui.TextUnformatted(label);
+        ImGui.TableSetColumnIndex(1);
+        if (ok is null) DrawDot(Dalamud.Interface.Colors.ImGuiColors.DalamudYellow);
+        else if (ok == true) DrawDot(Dalamud.Interface.Colors.ImGuiColors.HealerGreen);
+        else DrawDot(Dalamud.Interface.Colors.ImGuiColors.DalamudRed);
+    }
+
+    private async Task FetchHealthAsync()
+    {
+        if (_healthLoading) return;
+        _healthLoading = true;
+        _healthError = "";
+        try
+        {
+            using var http = new HttpClient() { Timeout = TimeSpan.FromSeconds(8) };
+            var json = await http.GetStringAsync(HealthUrl);
+            using var doc = JsonDocument.Parse(json);
+            var root = doc.RootElement;
+
+            _healthService = root.TryGetProperty("service", out var s) ? (s.GetString() ?? "") : "";
+            _healthVersion = root.TryGetProperty("version", out var v) ? (v.GetString() ?? "") : "";
+            _healthTime = root.TryGetProperty("time", out var t) ? (t.GetString() ?? "") : "";
+            _healthUsers = root.TryGetProperty("user_count", out var u) ? u.GetInt32() : 0;
+            _healthNotes = root.TryGetProperty("notes", out var n) ? (n.GetString() ?? "") : "";
+
+            // Clear and repopulate flags: treat any top-level bool as a status row,
+            // but skip common non-status fields.
+            _healthFlags.Clear();
+            foreach (var prop in root.EnumerateObject())
+            {
+                var name = prop.Name;
+                if (name.Equals("ok", StringComparison.OrdinalIgnoreCase) ||
+                    name.Equals("service", StringComparison.OrdinalIgnoreCase) ||
+                    name.Equals("version", StringComparison.OrdinalIgnoreCase) ||
+                    name.Equals("time", StringComparison.OrdinalIgnoreCase) ||
+                    name.Equals("user_count", StringComparison.OrdinalIgnoreCase) ||
+                    name.Equals("notes", StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                if (prop.Value.ValueKind == JsonValueKind.True || prop.Value.ValueKind == JsonValueKind.False)
+                    _healthFlags[name] = prop.Value.GetBoolean();
+            }
+
+            // If your health.php groups items (e.g., {"api":{"friends":true,"auth":true}}), include those too:
+            foreach (var prop in root.EnumerateObject())
+            {
+                if (prop.Value.ValueKind == JsonValueKind.Object)
+                {
+                    foreach (var sub in prop.Value.EnumerateObject())
+                    {
+                        if (sub.Value.ValueKind == JsonValueKind.True || sub.Value.ValueKind == JsonValueKind.False)
+                        {
+                            var key = $"{prop.Name}.{sub.Name}";
+                            _healthFlags[key] = sub.Value.GetBoolean();
+                        }
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _healthError = ex.Message;
+            // set flags to null so UI shows yellow while user retries
+            foreach (var k in _healthFlags.Keys.ToList()) _healthFlags[k] = null;
+            if (_healthFlags.Count == 0)
+            {
+                // provide a couple of standard rows so the table isn’t empty
+                _healthFlags["api"] = null;
+                _healthFlags["database"] = null;
+            }
+        }
+        finally { _healthLoading = false; }
+    }
+
+
+    private void DrawHealth()
+    {
+        // Header with basic info
+        ImGui.Text($"URL: {HealthUrl}");
+        if (!string.IsNullOrEmpty(_healthService) || !string.IsNullOrEmpty(_healthVersion))
+        {
+            ImGui.SameLine();
+            ImGui.TextDisabled($" | {_healthService} v{_healthVersion}");
+        }
+        if (!string.IsNullOrEmpty(_healthTime))
+            ImGui.TextDisabled($"Updated: {_healthTime}");
+        if (_healthUsers > 0)
+            ImGui.TextColored(ImGuiColors.HealerGreen, $"Active users: {_healthUsers}");
+        if (!string.IsNullOrEmpty(_healthNotes))
+            ImGui.TextWrapped(_healthNotes);
+
+        // Controls
+        if (ImGui.Button(_healthLoading ? "Fetching…" : "Refresh"))
+        {
+            _ = Task.Run(FetchHealthAsync);
+        }
+        ImGui.SameLine();
+        if (!string.IsNullOrEmpty(_healthError))
+            ImGui.TextColored(ImGuiColors.DalamudYellow, _healthError);
+
+        ImGui.Separator();
+
+        // Status table
+        if (ImGui.BeginTable("healthTbl", 2, ImGuiTableFlags.RowBg | ImGuiTableFlags.SizingStretchProp))
+        {
+            ImGui.TableSetupColumn("Check");
+            ImGui.TableSetupColumn("Status", ImGuiTableColumnFlags.WidthFixed, 80);
+            ImGui.TableHeadersRow();
+
+            // sort keys for stable layout
+            foreach (var kv in _healthFlags.OrderBy(k => k.Key, StringComparer.OrdinalIgnoreCase))
+                StatusRow(kv.Key, kv.Value);
+
+            ImGui.EndTable();
+        }
+
+        // auto-load the first time
+        if (_healthFlags.Count == 0 && !_healthLoading)
+            _ = Task.Run(FetchHealthAsync);
+    }
+
 
     // ----------------- Auth -----------------
     private void DrawAuth()
