@@ -1,0 +1,109 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <!-- Build -->
+    <TargetFramework>net9.0-windows</TargetFramework>
+    <AssemblyName>TangySync</AssemblyName>
+    <RootNamespace>TangySync</RootNamespace>
+    <Nullable>enable</Nullable>
+    <LangVersion>preview</LangVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+	<PlatformTarget>x64</PlatformTarget>
+    <Platforms>x64</Platforms>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <OutputPath>bin\</OutputPath>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+
+    <!-- Plugin version -->
+    <Version>0.2.0</Version>
+    <PluginInternalName>TangySync</PluginInternalName>
+
+    <!-- Where your files will be publicly hosted -->
+    <RepoHost>https://tangysync.com</RepoHost>
+    <RepoPath>/repo</RepoPath>
+    <RepoBaseUrl>$(RepoHost)$(RepoPath)</RepoBaseUrl>
+  </PropertyGroup>
+
+  <!-- Dalamud assemblies (from your dev env) -->
+  <ItemGroup>
+    <Reference Include="Dalamud">
+      <HintPath>$(AppData)\XIVLauncher\addon\Hooks\dev\Dalamud.dll</HintPath>
+    </Reference>
+    <Reference Include="Dalamud.Interface">
+      <HintPath>$(AppData)\XIVLauncher\addon\Hooks\dev\Dalamud.Interface.dll</HintPath>
+    </Reference>
+    <Reference Include="ImGui.NET">
+      <HintPath>$(AppData)\XIVLauncher\addon\Hooks\dev\ImGui.NET.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
+  <!-- Optional typed APIs (you went with string IPC, so you can remove this block if you want) -->
+  <ItemGroup>
+    <Reference Include="Glamourer.Api" Condition="Exists('deps\Glamourer.Api.dll')">
+      <HintPath>deps\Glamourer.Api.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Penumbra.Api" Condition="Exists('deps\Penumbra.Api.dll')">
+      <HintPath>deps\Penumbra.Api.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+  <!-- Make sure the internal plugin manifest is included in the output dir -->
+  <ItemGroup>
+    <None Include="TangySync.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <!-- === PACKAGING TARGET ===
+       After every Build, this creates:
+         dist/repo/TangySync.json  (repo file you add to Dalamud)
+         dist/release.zip          (zip with TangySync.dll + TangySync.json)
+  -->
+  <Target Name="Pack" AfterTargets="Build">
+    <PropertyGroup>
+      <DistDir>$(MSBuildProjectDirectory)\dist</DistDir>
+      <RepoDir>$(DistDir)\repo</RepoDir>
+      <ZipPath>$(DistDir)\release.zip</ZipPath>
+      <OutDll>$(MSBuildProjectDirectory)\bin\$(AssemblyName).dll</OutDll>
+      <InternalManifest>$(MSBuildProjectDirectory)\TangySync.json</InternalManifest>
+
+      <!-- Public URLs where you'll host these -->
+      <ZipUrl>$(RepoBaseUrl)/release.zip</ZipUrl>
+      <IconUrl>$(RepoBaseUrl)/icon.png</IconUrl>
+
+      <!-- Repo JSON output -->
+      <RepoJson>$(RepoDir)\TangySync.json</RepoJson>
+    </PropertyGroup>
+
+    <!-- Folders -->
+    <MakeDir Directories="$(DistDir)" />
+    <MakeDir Directories="$(RepoDir)" />
+
+    <!-- Build the install zip with the DLL + internal manifest -->
+    <Message Text="Packaging $(ZipPath)" Importance="High" />
+    <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -Command &quot;
+        if (Test-Path '$(ZipPath)') { Remove-Item '$(ZipPath)' -Force };
+        Compress-Archive -Force -Path '$(OutDll)','$(InternalManifest)' -DestinationPath '$(ZipPath)' &quot;" />
+
+    <!-- Generate the repo JSON (array with one plugin entry) -->
+    <WriteLinesToFile File="$(RepoJson)" Overwrite="true" Lines="
+[
+  {
+    &quot;Author&quot;: &quot;Tangy&quot;,
+    &quot;Name&quot;: &quot;TangySync&quot;,
+    &quot;InternalName&quot;: &quot;TangySync&quot;,
+    &quot;AssemblyVersion&quot;: &quot;$(Version)&quot;,
+    &quot;Description&quot;: &quot;Import/export MCDF (Mare-compatible) in GPose. Health/Auth/Sync tabs. Glamourer/Penumbra/Customize+/Honorific/Heels.&quot;,
+    &quot;ApplicableVersion&quot;: &quot;any&quot;,
+    &quot;RepoUrl&quot;: &quot;https://github.com/yourname/TangySync&quot;,
+    &quot;Tags&quot;: [ &quot;MCDF&quot;, &quot;Glamourer&quot;, &quot;Penumbra&quot;, &quot;Customize+&quot;, &quot;Honorific&quot;, &quot;Heels&quot;, &quot;GPose&quot;, &quot;Mare&quot; ],
+    &quot;DalamudApiLevel&quot;: 13,
+    &quot;LoadPriority&quot;: 0,
+    &quot;IconUrl&quot;: &quot;$(IconUrl)&quot;,
+    &quot;DownloadLinkInstall&quot;: &quot;$(ZipUrl)&quot;,
+    &quot;DownloadLinkTesting&quot;: &quot;$(ZipUrl)&quot;,
+    &quot;DownloadLinkUpdate&quot;: &quot;$(ZipUrl)&quot;
+  }
+]
+" />
+  </Target>
+</Project>

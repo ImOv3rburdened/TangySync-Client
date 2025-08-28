@@ -1,0 +1,12 @@
+{
+  "Author": "Tangy",
+  "Name": "TangySync",
+  "InternalName": "TangySync",
+  "AssemblyVersion": "0.2.0",
+  "Description": "Import/export MCDF (Mare-compatible) in GPose. Works with Glamourer, Penumbra, Customize+, Honorific, Heels. Includes Health, Auth, and Sync tabs.",
+  "ApplicableVersion": "any",
+  "RepoUrl": "https://github.com/yourname/TangySync",
+  "Tags": [ "MCDF", "Glamourer", "Penumbra", "Customize+", "Honorific", "Heels", "GPose", "Mare" ],
+  "DalamudApiLevel": 13,
+  "LoadPriority": 0
+}
