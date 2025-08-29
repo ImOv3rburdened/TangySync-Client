@@ -52,6 +52,10 @@
   <ItemGroup>
     <None Include="TangySync.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="DalamudPackager" Version="13.1.0" />
+    <PackageReference Include="ImGui.NET" Version="1.91.6.1" />
+  </ItemGroup>
 
   <!-- === PACKAGING TARGET ===
        After every Build, this creates:

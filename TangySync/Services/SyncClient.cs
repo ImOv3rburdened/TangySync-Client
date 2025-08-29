@@ -54,7 +54,7 @@ public sealed class SyncClient : IDisposable
         finally { _hbSending = false; }
     }
 
-    // ---- P2P offer (sender side) ----
+    //P2P offer (sender side)
     public async Task<bool> SendFileAsync(string peerVanity, string path, long bytesPerSec, CancellationToken ct, string? ipOverride = null)
     {
         if (!File.Exists(path)) { OnStatus?.Invoke("file not found"); return false; }
@@ -62,13 +62,13 @@ public sealed class SyncClient : IDisposable
         var fi = new FileInfo(path);
         var hash = await Hasher.Sha256Async(path, ct);
 
-        // Start listener on ephemeral port
+        //Start listener on ephemeral port
         var listener = new TcpListener(IPAddress.Any, 0);
         listener.Start();
         var endPoint = (IPEndPoint)listener.LocalEndpoint;
         var port = endPoint.Port;
 
-        // Determine advertised IP
+        //Determine advertised IP
         var hostIp = !string.IsNullOrWhiteSpace(ipOverride) ? IPAddress.Parse(ipOverride) : GetLocalIPv4() ?? IPAddress.Loopback;
 
         // Create offer payload
@@ -87,7 +87,7 @@ public sealed class SyncClient : IDisposable
         if (st != 200) { OnStatus?.Invoke($"offer http {st}"); listener.Stop(); return false; }
         OnStatus?.Invoke($"offer sent to @{peerVanity} ({hostIp}:{port})");
 
-        // Accept exactly one receiver and send file
+        //Accept exactly one receiver and send file
         try
         {
             using var client = await listener.AcceptTcpClientAsync(ct);
@@ -101,7 +101,7 @@ public sealed class SyncClient : IDisposable
         finally { listener.Stop(); }
     }
 
-    // ---- P2P receive (poll inbox, connect as client) ----
+    //P2P receive (poll inbox, connect as client)
     public async Task<int> HandleInboxOnceAsync(string saveDir, CancellationToken ct)
     {
         var (json, st) = await _api.SignalInbox(ct);

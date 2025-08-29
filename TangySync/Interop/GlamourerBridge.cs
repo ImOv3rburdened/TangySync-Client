@@ -1,5 +1,4 @@
-﻿// TangySync/Interop/GlamourerBridge.cs
-using Dalamud.Plugin;
+﻿using Dalamud.Plugin;
 using Dalamud.Plugin.Ipc;
 
 namespace TangySync.Interop;
@@ -13,11 +12,10 @@ public interface IGlamourerBridge
 
 public sealed class GlamourerBridge : IGlamourerBridge
 {
-    private const uint LockKey = 0x54414E47; // 'TANG'
-
-    // (name, lock) -> (ec, base64)
+    private const uint LockKey = 0x54414E47;
+    
     private readonly ICallGateSubscriber<string, uint, (int, string?)> _getByName;
-    // (base64, name, lock) -> ec
+   
     private readonly ICallGateSubscriber<string, string, uint, int> _applyByName;
 
     public GlamourerBridge(IDalamudPluginInterface pi)

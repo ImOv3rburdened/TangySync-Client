@@ -18,7 +18,7 @@ public static class TcpTransport
     {
         var fi = new FileInfo(path);
 
-        // ----- header -----
+        //header 
         var header = $"{{\"name\":\"{Escape(fi.Name)}\",\"size\":{fi.Length},\"sha256\":\"{sha256}\",\"chunk\":1048576}}";
         var headerBytes = Encoding.UTF8.GetBytes(header);
 
@@ -27,10 +27,10 @@ public static class TcpTransport
         await net.WriteAsync(lenBuf.AsMemory(0, 4), ct);
         await net.WriteAsync(headerBytes.AsMemory(0, headerBytes.Length), ct);
 
-        // ----- body -----
+        //body
         var limiter = new RateLimiter(bytesPerSec);
 
-        // enumerate chunks with cancellation in a standards-compliant way
+        //enumerate chunks with cancellation in a standards-compliant way
         var chunker = new Chunker(path);
         await foreach (var item in chunker.WithCancellation(ct))
         {
@@ -43,7 +43,7 @@ public static class TcpTransport
             await net.WriteAsync(data.AsMemory(0, len), ct);
         }
 
-        // tail: zero length (EOF)
+        //tail: zero length (EOF)
         BinaryPrimitives.WriteInt32LittleEndian(lenBuf, 0);
         await net.WriteAsync(lenBuf.AsMemory(0, 4), ct);
     }
@@ -52,7 +52,7 @@ public static class TcpTransport
     {
         var lenBuf = new byte[4];
 
-        // ----- header -----
+        //header
         await net.ReadExactlyAsync(lenBuf.AsMemory(0, 4), ct);
         var hLen = BinaryPrimitives.ReadInt32LittleEndian(lenBuf);
         var hBytes = new byte[hLen];
@@ -71,7 +71,7 @@ public static class TcpTransport
 
         long total = 0;
 
-        // ----- body -----
+        //body
         while (true)
         {
             await net.ReadExactlyAsync(lenBuf.AsMemory(0, 4), ct);

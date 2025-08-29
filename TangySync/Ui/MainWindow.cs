@@ -26,36 +26,36 @@ public sealed class MainWindow : IDisposable
     private readonly ICondition _cond;
     private readonly IClientState _client;
 
-    // IPC bridges
+    //IPC bridges
     private readonly IGlamourerBridge _glam;
     private readonly ICustomizePlusBridge _cplus;
     private readonly IHonorificBridge _honor;
     private readonly IHeelsBridge _heels;
     private readonly IPenumbraBridge _penu;
 
-    // Sync & transfer
+    //Sync & transfer
     private readonly SyncClient _sync;
     private CancellationTokenSource? _xferCts;
     private int _bps = 512_000;
     private bool _paused;
     private string _status = "Idle";
 
-    // Tabs & state
+    //Tabs & state
     private bool _visible;
     private int _tab = 0; // 0 Data, 1 Friends, 2 Sync, 3 Health, 4 Auth
 
-    // Data tab (explorer)
+    //Data tab (explorer)
     private string _folder;
     private string _search = "";
     private string _selectedFile = "";
     private string _exportName = "tangysync.mcdf";
 
-    // Friends
+    //Friends
     private string _vanity = "";
     private string _friendToAdd = "";
     private List<FriendRow> _friends = new();
 
-    // Health state
+    //Health state
     private bool _healthLoading = false;
     private string _healthError = "";
     private string _healthService = "";
@@ -63,10 +63,10 @@ public sealed class MainWindow : IDisposable
     private string _healthTime = "";
     private string _healthNotes = "";
     private int _healthUsers = 0;
-    // key -> true/false; null = not loaded yet (shows yellow)
+    //key -> true/false; null = not loaded yet (shows yellow)
     private readonly Dictionary<string, bool?> _healthFlags = new(StringComparer.OrdinalIgnoreCase);
 
-    // Convenience
+    //Convenience
     private string HealthUrl => _cfg.Data.ServerBaseUrl.TrimEnd('/') + "/health.php";
 
 
@@ -100,17 +100,17 @@ public sealed class MainWindow : IDisposable
         ImGui.SetNextWindowSize(new Vector2(900, 610), ImGuiCond.FirstUseEver);
         if (!ImGui.Begin("TangySync", ref _visible, ImGuiWindowFlags.NoCollapse)) { ImGui.End(); return; }
 
-        // Header
+        //Header
         ImGui.TextColored(ImGuiColors.DalamudViolet, "TangySync v0.2.0");
         ImGui.SameLine();
         ImGui.TextDisabled($"| {_status}");
 
-        // Left nav
+        //Left nav
         ImGui.BeginChild("nav", new Vector2(160, 0), true);
         Nav("Data", 0); Nav("Friends", 1); Nav("Sync", 2); Nav("Health", 3); Nav("Auth", 4);
         ImGui.EndChild(); ImGui.SameLine();
 
-        // Body
+        //Body
         ImGui.BeginChild("content", new Vector2(0, 0), false);
         switch (_tab)
         {
@@ -133,7 +133,7 @@ public sealed class MainWindow : IDisposable
         }
     }
 
-    // ----------------- Data (MCDF explorer) -----------------
+    //Data (MCDF explorer)
     private void DrawData()
     {
         var gpose = InGpose();
@@ -304,7 +304,7 @@ public sealed class MainWindow : IDisposable
         }
     }
 
-    // ----------------- Friends -----------------
+    //Friends
     private async void DrawFriends()
     {
         var authed = !string.IsNullOrWhiteSpace(_cfg.Data.Token);
@@ -333,7 +333,7 @@ public sealed class MainWindow : IDisposable
         ImGui.SameLine();
         if (ImGui.Button("Refresh"))
         {
-            _ = Task.Run(LoadFriends);  // runs in background
+            _ = Task.Run(LoadFriends);  //runs in background
         }
 
         ImGui.Separator();
@@ -370,8 +370,8 @@ public sealed class MainWindow : IDisposable
 
     private async Task LoadFriends()
     {
-        if (_friendsLoading) return;                   // prevent spamming
-        if ((DateTime.UtcNow - _lastFriendsRefresh).TotalSeconds < 5) return; // cooldown
+        if (_friendsLoading) return;                   //prevent spamming
+        if ((DateTime.UtcNow - _lastFriendsRefresh).TotalSeconds < 5) return; //cooldown
 
         _friendsLoading = true;
         try
@@ -404,7 +404,7 @@ public sealed class MainWindow : IDisposable
     }
 
 
-    // ----------------- Sync (send/receive) -----------------
+    //Sync (send/receive)
     private void DrawSync()
     {
         var authed = !string.IsNullOrWhiteSpace(_cfg.Data.Token);
@@ -449,7 +449,7 @@ public sealed class MainWindow : IDisposable
         ImGui.EndDisabled();
     }
 
-    // ----------------- Health -----------------
+    //Health
     private static void DrawDot(Vector4 color)
     {
         ImGui.PushStyleColor(ImGuiCol.Text, color);
@@ -485,8 +485,8 @@ public sealed class MainWindow : IDisposable
             _healthUsers = root.TryGetProperty("user_count", out var u) ? u.GetInt32() : 0;
             _healthNotes = root.TryGetProperty("notes", out var n) ? (n.GetString() ?? "") : "";
 
-            // Clear and repopulate flags: treat any top-level bool as a status row,
-            // but skip common non-status fields.
+            //Clear and repopulate flags: treat any top-level bool as a status row,
+            //but skip common non-status fields.
             _healthFlags.Clear();
             foreach (var prop in root.EnumerateObject())
             {
@@ -503,7 +503,7 @@ public sealed class MainWindow : IDisposable
                     _healthFlags[name] = prop.Value.GetBoolean();
             }
 
-            // If your health.php groups items (e.g., {"api":{"friends":true,"auth":true}}), include those too:
+            //If your health.php groups items (e.g., {"api":{"friends":true,"auth":true}}), include those too:
             foreach (var prop in root.EnumerateObject())
             {
                 if (prop.Value.ValueKind == JsonValueKind.Object)
@@ -522,11 +522,11 @@ public sealed class MainWindow : IDisposable
         catch (Exception ex)
         {
             _healthError = ex.Message;
-            // set flags to null so UI shows yellow while user retries
+            //set flags to null so UI shows yellow while user retries
             foreach (var k in _healthFlags.Keys.ToList()) _healthFlags[k] = null;
             if (_healthFlags.Count == 0)
             {
-                // provide a couple of standard rows so the table isn’t empty
+                //provide a couple of standard rows so the table isn’t empty
                 _healthFlags["api"] = null;
                 _healthFlags["database"] = null;
             }
@@ -537,7 +537,7 @@ public sealed class MainWindow : IDisposable
 
     private void DrawHealth()
     {
-        // Header with basic info
+        //Header with basic info
         ImGui.Text($"URL: {HealthUrl}");
         if (!string.IsNullOrEmpty(_healthService) || !string.IsNullOrEmpty(_healthVersion))
         {
@@ -551,7 +551,7 @@ public sealed class MainWindow : IDisposable
         if (!string.IsNullOrEmpty(_healthNotes))
             ImGui.TextWrapped(_healthNotes);
 
-        // Controls
+        //Controls
         if (ImGui.Button(_healthLoading ? "Fetching…" : "Refresh"))
         {
             _ = Task.Run(FetchHealthAsync);
@@ -562,27 +562,27 @@ public sealed class MainWindow : IDisposable
 
         ImGui.Separator();
 
-        // Status table
+        //Status table
         if (ImGui.BeginTable("healthTbl", 2, ImGuiTableFlags.RowBg | ImGuiTableFlags.SizingStretchProp))
         {
             ImGui.TableSetupColumn("Check");
             ImGui.TableSetupColumn("Status", ImGuiTableColumnFlags.WidthFixed, 80);
             ImGui.TableHeadersRow();
 
-            // sort keys for stable layout
+            //sort keys for stable layout
             foreach (var kv in _healthFlags.OrderBy(k => k.Key, StringComparer.OrdinalIgnoreCase))
                 StatusRow(kv.Key, kv.Value);
 
             ImGui.EndTable();
         }
 
-        // auto-load the first time
+        //auto-load the first time
         if (_healthFlags.Count == 0 && !_healthLoading)
             _ = Task.Run(FetchHealthAsync);
     }
 
 
-    // ----------------- Auth -----------------
+    //Auth
     private void DrawAuth()
     {
         ImGui.Text("Discord registration / OAuth:");
@@ -596,7 +596,7 @@ public sealed class MainWindow : IDisposable
         if (ImGui.Button("Clear")) { _cfg.Data.Token = ""; _cfg.Save(); }
     }
 
-    // ----------------- helpers -----------------
+    //helpers
     private bool InGpose()
     {
         try

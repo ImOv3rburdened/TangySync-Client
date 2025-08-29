@@ -12,8 +12,8 @@ public interface IHeelsBridge
 
 public sealed class HeelsBridge : IHeelsBridge
 {
-    private ICallGateSubscriber<string>? _get;   // usually: Heels.GetOffset -> string
-    private object? _set;                        // dynamic, handles different signatures
+    private ICallGateSubscriber<string>? _get;
+    private object? _set;
 
     public bool Available { get; private set; }
 
@@ -22,13 +22,12 @@ public sealed class HeelsBridge : IHeelsBridge
         try
         {
             _get = pi.GetIpcSubscriber<string>("Heels.GetOffset");
-
-            // Try common signatures for Heels.OffsetUpdate
-            try { _set = pi.GetIpcSubscriber<string>("Heels.OffsetUpdate"); }          // InvokeAction(string)
+            
+            try { _set = pi.GetIpcSubscriber<string>("Heels.OffsetUpdate"); }
             catch
             {
-                try { _set = pi.GetIpcSubscriber<string, object?>("Heels.OffsetUpdate"); } // InvokeFunc(string) / older variants
-                catch { _set = pi.GetIpcSubscriber<object?>("Heels.OffsetUpdate"); }       // no-arg variant, if any
+                try { _set = pi.GetIpcSubscriber<string, object?>("Heels.OffsetUpdate"); }
+                catch { _set = pi.GetIpcSubscriber<object?>("Heels.OffsetUpdate"); }
             }
 
             Available = true;
@@ -48,11 +47,8 @@ public sealed class HeelsBridge : IHeelsBridge
         try
         {
             dynamic d = _set;
-            // Try action(string)
             try { d.InvokeAction(offset ?? ""); return true; } catch { }
-            // Try func(string)
             try { var _ = d.InvokeFunc(offset ?? ""); return true; } catch { }
-            // Try action() with no params
             try { d.InvokeAction(); return true; } catch { }
         }
         catch { }

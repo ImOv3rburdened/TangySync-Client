@@ -1,5 +1,4 @@
-﻿// TangySync/Services/ApiClient.cs
-using System;
+﻿using System;
 using System.Net.Http;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -17,7 +16,6 @@ public sealed class ApiClient
     public ApiClient(ConfigService cfg)
     {
         _cfg = cfg;
-        // One HttpClient for the life of the plugin
         var handler = new HttpClientHandler
         {
             AllowAutoRedirect = false,
@@ -52,7 +50,7 @@ public sealed class ApiClient
     private static (JsonDocument, int) SafeResult(string error, int status = 0)
         => (JsonDocument.Parse($"{{\"ok\":false,\"error\":\"{error.Replace("\"", "\\\"")}\"}}"), status);
 
-    // --------- Core safe ops ---------
+    //Core safe ops
 
     public async Task<(JsonDocument json, int status)> GetJson(string path, CancellationToken ct = default)
     {
@@ -90,7 +88,7 @@ public sealed class ApiClient
         catch { return 0; }
     }
 
-    // -------- Friends --------
+    //Friends
     public Task<(JsonDocument, int)> FriendsList(CancellationToken ct = default)
         => GetJson("/api/friends", ct);
 
@@ -103,14 +101,14 @@ public sealed class ApiClient
     public Task<int> FriendsRemove(string vanity, CancellationToken ct = default)
         => PostStatus("/api/friends/remove", new { vanity }, ct);
 
-    // -------- Presence & health --------
+    //Presence & health
     public Task<(JsonDocument, int)> Health(CancellationToken ct = default)
         => GetJson("/api/health", ct);
 
     public Task<int> Heartbeat(bool gpose, CancellationToken ct = default)
         => PostStatus("/api/presence/heartbeat", new { gpose }, ct);
-
-    // -------- Signaling --------
+    
+    //Signaling
     public Task<int> SignalOffer(string to, string payload, CancellationToken ct = default)
         => PostStatus("/api/signal/offer", new { to, sdp = payload }, ct);
 

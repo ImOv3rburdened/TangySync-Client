@@ -1,5 +1,4 @@
-﻿// TangySync/Interop/PenumbraBridge.cs
-using Dalamud.Plugin;
+﻿using Dalamud.Plugin;
 using Dalamud.Plugin.Ipc;
 
 namespace TangySync.Interop;
